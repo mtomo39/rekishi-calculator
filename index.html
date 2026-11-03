@@ -8,7 +8,7 @@
 </head>
 <body>
 <main class="app">
-<header><div><h1>履歴電卓</h1><p>式をつくって、履歴から再利用</p><p class="version">Ver. 1.0.2</p></div><button id="exportBtn" class="small">バックアップ</button></header>
+<header><div><h1>履歴電卓</h1><p>式をつくって、履歴から再利用</p><p class="version">Ver. 1.1.0</p></div><button id="exportBtn" class="small">バックアップ</button></header>
 <section class="calculator" aria-label="電卓">
   <label for="expression">計算式</label>
   <input id="expression" type="text" value="" placeholder="数字や演算子を入力" readonly inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" aria-readonly="true">
@@ -16,11 +16,11 @@
   <div id="message" class="message" aria-live="polite">下のキーで入力</div>
   <div class="keypad" id="keypad">
     <button data-key="C" class="utility">C</button><button data-key="(" class="utility">(</button><button data-key=")" class="utility">)</button><button data-key="⌫" class="utility">⌫</button>
-    <button data-key="貼付" class="utility">貼付</button>
     <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button data-key="÷" class="operator">÷</button>
     <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button data-key="×" class="operator">×</button>
     <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button data-key="−" class="operator">−</button>
-    <button data-key="0">0</button><button data-key=".">.</button><button data-key="+" class="operator">+</button><button data-key="=" class="equals">=</button>
+    <button data-key="貼付" class="utility">貼付</button><button data-key="0">0</button><button data-key=".">.</button><button data-key="+" class="operator">+</button>
+    <button data-key="=" class="equals">=</button>
   </div>
 </section>
 <section class="history-section"><div class="section-head"><h2>計算履歴</h2><button id="clearHistory" class="text-button">履歴を全削除</button></div><div id="history" class="history"><p class="empty">まだ履歴はありません</p></div></section>

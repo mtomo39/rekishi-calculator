@@ -15,3 +15,8 @@ Safariで公開URLを開き、共有 → ホーム画面に追加。
 - localStorage保存、Service Workerによるオフラインキャッシュ
 
 履歴式の一部分はiOSのテキスト選択で選択できます。履歴は端末内保存で、端末データ削除時には失われる可能性があります。バックアップを定期的に保存してください。
+
+
+## Version 1.1.0
+- iPhone calculator-style keypad: number keys are grouped on the left and operators are in the right column.
+- Equals button spans the bottom row.
