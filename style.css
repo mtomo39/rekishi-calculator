@@ -4,3 +4,5 @@
 
 /* v1.1.0: iPhone-style layout — digits on the left, operators in the right column. */
 .keypad .equals{grid-column:1 / -1;height:54px}
+
+.header-actions{display:flex;gap:7px;align-items:center}

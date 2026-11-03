@@ -20,3 +20,8 @@ Safariで公開URLを開き、共有 → ホーム画面に追加。
 ## Version 1.1.0
 - iPhone calculator-style keypad: number keys are grouped on the left and operators are in the right column.
 - Equals button spans the bottom row.
+
+
+## Version 1.2.0
+- Added a history action to copy the calculation result.
+- Added an undo button to revert the latest expression edit (up to 100 steps).
