@@ -8,10 +8,10 @@
 </head>
 <body>
 <main class="app">
-<header><div><h1>履歴電卓</h1><p>式をつくって、履歴から再利用</p></div><button id="exportBtn" class="small">バックアップ</button></header>
+<header><div><h1>履歴電卓</h1><p>式をつくって、履歴から再利用</p><p class="version">Ver. 1.0.2</p></div><button id="exportBtn" class="small">バックアップ</button></header>
 <section class="calculator" aria-label="電卓">
   <label for="expression">計算式</label>
-  <input id="expression" type="text" value="" placeholder="数字や演算子を入力" readonly inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false">
+  <input id="expression" type="text" value="" placeholder="数字や演算子を入力" readonly inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" aria-readonly="true">
   <div id="result" class="result" aria-live="polite">0</div>
   <div id="message" class="message" aria-live="polite">下のキーで入力</div>
   <div class="keypad" id="keypad">
