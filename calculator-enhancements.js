@@ -47,8 +47,7 @@ function lastNumberRange() {
     while (start > 0 && /[0-9.]/.test(value[start - 1])) start--;
     while (end < value.length && /[0-9.]/.test(value[end])) end++;
   }
-  if (start === end) return null;
-  return { value, start, end, number: value.slice(start, end) };
+  return start === end ? null : { value, start, end, number: value.slice(start, end) };
 }
 
 function replaceCurrentNumber(replacement) {
@@ -66,28 +65,12 @@ function replaceCurrentNumber(replacement) {
   return true;
 }
 
-function percentValue(number) {
-  const match = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(number);
-  if (!match) return null;
-  const sign = match[1];
-  let digits = (match[2] || '0') + (match[3] || '');
-  let scale = (match[3] || '').length + 2;
-  while (scale > 0 && digits.length > 1 && digits[0] === '0') digits = digits.slice(1);
-  digits = digits.padStart(scale + 1, '0');
-  const point = digits.length - scale;
-  const integer = point > 0 ? digits.slice(0, point) : '0';
-  const fraction = point > 0 ? digits.slice(point) : '0'.repeat(-point) + digits;
-  const trimmedFraction = fraction.replace(/0+$/, '');
-  return sign + integer + (trimmedFraction ? '.' + trimmedFraction : '');
-}
-
 function toggleSign() {
   const range = lastNumberRange();
   if (!range) {
     window.showMessage('数字を入力してから押してください');
     return;
   }
-  let replacement = range.number;
   const before = range.value.slice(0, range.start);
   const unaryMinus = before.endsWith('-') &&
     (before.length === 1 || /[+−*/×÷(]/.test(before[before.length - 2]));
@@ -95,12 +78,25 @@ function toggleSign() {
     window.pushUndo();
     const next = before.slice(0, -1) + range.value.slice(range.start);
     window.setExpression(next);
-    window.setSelectionOffsets(Math.max(0, range.start - 1), Math.max(0, range.start - 1));
-  } else {
-    replacement = '-' + replacement;
-    replaceCurrentNumber(replacement);
+    const cursor = window.formatExpression(next.slice(0, range.start - 1)).length;
+    window.setSelectionOffsets(cursor, cursor);
+    window.displayResult();
+    return;
   }
-  window.displayResult();
+  replaceCurrentNumber('-' + range.number);
+}
+
+function percentValue(number) {
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(number);
+  if (!match) return null;
+  const sign = match[1];
+  const digits = (match[2] || '0') + (match[3] || '');
+  const scale = (match[3] || '').length + 2;
+  const padded = digits.padStart(scale + 1, '0');
+  const point = padded.length - scale;
+  const integer = padded.slice(0, point) || '0';
+  const fraction = padded.slice(point).replace(/0+$/, '');
+  return sign + integer + (fraction ? '.' + fraction : '');
 }
 
 function lastBinaryOperation(source) {
@@ -123,23 +119,8 @@ function lastBinaryOperation(source) {
   }
 }
 
-function insertExtraKeys() {
-  const row = document.createElement('div');
-  row.className = 'keypad-extra-row';
-  for (const [label, key] of [['±', '±'], ['%','%']]) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.key = key;
-    button.className = 'utility';
-    button.textContent = label;
-    row.append(button);
-  }
-  keypad.insertBefore(row, keypad.querySelector('[data-key="7"]'));
-}
-
-insertExtraKeys();
-
-// Handle new keys before the calculator's delegated keypad click listener.
+// % and ± are static keypad buttons. The capture handler prevents the app's
+// delegated keypad handler from treating them as ordinary text input.
 keypad.addEventListener('click', event => {
   const button = event.target.closest('button[data-key]');
   if (!button) return;
@@ -152,9 +133,9 @@ keypad.addEventListener('click', event => {
       if (range) replaceCurrentNumber(percentValue(range.number));
       else window.showMessage('数字を入力してから押してください');
     }
-    return;
+  } else if (key !== '=') {
+    repeatState.operator = repeatState.operand = null;
   }
-  if (key !== '=') repeatState.operator = repeatState.operand = null;
 }, true);
 
 window.press = async function (key) {
@@ -162,7 +143,6 @@ window.press = async function (key) {
     repeatState.operator = repeatState.operand = null;
     return originalPress(key);
   }
-
   const source = rawExpression();
   if (repeatState.operator && source === String(window.lastResult)) {
     window.setExpression(source + repeatState.operator + repeatState.operand);
@@ -180,20 +160,19 @@ window.press = async function (key) {
   return originalPress(key);
 };
 
-// Add an insert-result action separate from the existing copy-result action.
+// Add a separate action to insert the prior result into the current expression.
 const originalRenderHistory = window.renderHistory;
 window.renderHistory = function () {
   originalRenderHistory();
-  const cards = document.querySelectorAll('#history .history-item');
-  cards.forEach((card, index) => {
-    const item = window.history[index];
-    if (!item) return;
+  document.querySelectorAll('#history .history-item').forEach(card => {
+    const resultText = card.querySelector('.history-result')?.textContent || '';
+    const result = resultText.replace(/^=\s*/, '').replace(/,/g, '');
+    if (!result) return;
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = '結果を使う';
-    button.addEventListener('click', () => window.insert(item.result));
-    card.querySelector('.history-actions').append(button);
+    button.addEventListener('click', () => window.insert(result));
+    card.querySelector('.history-actions')?.append(button);
   });
 };
-// app.js calls renderHistory during initial load before this extension is installed.
 window.renderHistory();

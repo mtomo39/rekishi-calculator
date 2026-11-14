@@ -35,17 +35,19 @@
       <button id="selectNumber" type="button">選択</button>
     </div>
     <div id="result" class="result" aria-live="polite">0</div>
-    <div class="result-actions" aria-label="履歴と貼り付け">
-      <button id="historyToggle" class="history-toggle" type="button"
-        aria-controls="history" aria-expanded="false">履歴</button>
-      <button id="pasteBtn" type="button">貼付</button>
-    </div>
 
     <div class="keypad" id="keypad">
+      <div class="keypad-top-row" aria-label="追加操作">
+        <button data-key="%" class="utility" type="button">%</button>
+        <button data-key="±" class="utility" type="button">±</button>
+        <button id="historyToggle" class="utility history-toggle" type="button"
+          aria-controls="history" aria-expanded="false">履歴</button>
+        <button id="pasteBtn" data-key="貼付" class="utility" type="button">貼付</button>
+      </div>
       <button data-key="C" class="utility">C</button>
       <button data-key="(" class="utility">(</button>
       <button data-key=")" class="utility">)</button>
-      <button data-key="⌫" class="utility">⌫</button>
+      <button data-key="⌫" class="utility" aria-label="一文字削除">⌫</button>
 
       <button data-key="7">7</button><button data-key="8">8</button>
       <button data-key="9">9</button><button data-key="÷" class="operator">÷</button>
@@ -74,7 +76,7 @@
       <p class="empty">履歴はありません</p>
     </div>
   </section>
-  <footer class="app-footer"><span class="version">Ver. 1.7.0</span></footer>
+  <footer class="app-footer"><span class="version">Ver. 1.7.1</span></footer>
 </main>
 <script src="app.js"></script>
 <script src="history-navigation.js"></script>

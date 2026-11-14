@@ -1,4 +1,4 @@
-const CACHE = 'rekishi-calculator-v1.7.0';
+const CACHE = 'rekishi-calculator-v1.7.1';
 const FILES = [
   './',
   './index.html',
