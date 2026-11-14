@@ -71,7 +71,11 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
 #calculator.history-view #expression,
 #calculator.history-view #editorTools,
 #calculator.history-view #keypad > :not(.keypad-top-row),
-#calculator.history-view #pasteBtn { display: none; }
+#calculator.history-view #pasteBtn,
+#calculator.history-view .keypad-top-row button[data-key="%"],
+#calculator.history-view .keypad-top-row button[data-key="±"] { display: none; }
+#calculator.history-view .keypad-top-row { grid-template-columns: minmax(0, 1fr); }
+#calculator.history-view #historyToggle { grid-column: 1; width: 100%; }
 @media (max-height: 700px) {
   body { padding-top: max(env(safe-area-inset-top), 8px); }
   .app { padding-top: 10px; }
