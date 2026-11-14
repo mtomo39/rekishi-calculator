@@ -15,17 +15,19 @@
 <body>
 <main class="app">
   <header class="topbar">
-    <span class="version">Ver. 1.3.0</span>
-    <div class="header-actions">
-      <button id="undoBtn" class="small" type="button">元に戻す</button>
-      <button id="exportBtn" class="small" type="button">バックアップ</button>
-    </div>
+    <span class="version">Ver. 1.4.0</span>
   </header>
 
   <section class="calculator" aria-label="電卓">
-    <input id="expression" type="text" value="" placeholder="0"
-      readonly inputmode="none" autocomplete="off" autocorrect="off"
-      spellcheck="false" aria-label="計算式">
+    <div id="expression" class="expression-editor" contenteditable="true"
+      inputmode="none" role="textbox" aria-label="計算式" aria-multiline="false"
+      spellcheck="false" autocorrect="off" autocomplete="off" data-placeholder="0"></div>
+    <div class="editor-tools" aria-label="カーソルと編集">
+      <button id="cursorLeft" type="button" aria-label="カーソルを左へ">◀</button>
+      <button id="cursorRight" type="button" aria-label="カーソルを右へ">▶</button>
+      <button id="selectNumber" type="button">数字を選択</button>
+      <button id="undoBtn" type="button">元に戻す</button>
+    </div>
     <div id="result" class="result" aria-live="polite">0</div>
     <div id="message" class="message" aria-live="polite"></div>
 
@@ -55,7 +57,10 @@
   <section class="history-section">
     <div class="section-head">
       <h2>履歴</h2>
-      <button id="clearHistory" class="text-button" type="button">全削除</button>
+      <div class="history-head-actions">
+        <button id="exportBtn" class="text-button" type="button">履歴を書き出す</button>
+        <button id="clearHistory" class="text-button" type="button">全削除</button>
+      </div>
     </div>
     <div id="history" class="history">
       <p class="empty">履歴はありません</p>

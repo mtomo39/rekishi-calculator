@@ -2,6 +2,44 @@
 
 const $ = (selector) => document.querySelector(selector);
 const exprEl = $('#expression');
+let rememberedSelection = { start: 0, end: 0 };
+
+function getExpression() { return exprEl.textContent || ''; }
+function setExpression(value) { exprEl.textContent = String(value ?? ''); }
+function getSelectionOffsets() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount) return rememberedSelection;
+  const range = selection.getRangeAt(0);
+  if (!exprEl.contains(range.startContainer) || !exprEl.contains(range.endContainer)) return rememberedSelection;
+  const beforeStart = range.cloneRange();
+  beforeStart.selectNodeContents(exprEl);
+  beforeStart.setEnd(range.startContainer, range.startOffset);
+  const beforeEnd = range.cloneRange();
+  beforeEnd.selectNodeContents(exprEl);
+  beforeEnd.setEnd(range.endContainer, range.endOffset);
+  rememberedSelection = { start: beforeStart.toString().length, end: beforeEnd.toString().length };
+  return rememberedSelection;
+}
+function setSelectionOffsets(start, end = start) {
+  exprEl.focus({ preventScroll: true });
+  const textNode = exprEl.firstChild || exprEl.appendChild(document.createTextNode(''));
+  const length = textNode.textContent.length;
+  const a = Math.max(0, Math.min(start, length));
+  const b = Math.max(a, Math.min(end, length));
+  const range = document.createRange();
+  range.setStart(textNode, a);
+  range.setEnd(textNode, b);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  rememberedSelection = { start: a, end: b };
+}
+function normalizeExpression(source) {
+  return String(source)
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[＋]/g, '+').replace(/[－−]/g, '-').replace(/[．。]/g, '.')
+    .replace(/[×]/g, '*').replace(/[÷]/g, '/');
+}
 const resultEl = $('#result');
 const messageEl = $('#message');
 const historyEl = $('#history');
@@ -16,7 +54,7 @@ function showMessage(message = '') {
 }
 
 function pushUndo() {
-  undoStack.push(exprEl.value);
+  undoStack.push(getExpression());
   if (undoStack.length > 100) undoStack.shift();
 }
 
@@ -25,15 +63,15 @@ function undo() {
     showMessage('戻せる操作がありません');
     return;
   }
-  exprEl.value = undoStack.pop();
+  setExpression(undoStack.pop());
   moveCursorToEnd();
   displayResult();
   showMessage('元に戻しました');
 }
 
 function moveCursorToEnd() {
-  const end = exprEl.value.length;
-  try { exprEl.setSelectionRange(end, end); } catch (_) {}
+  const end = getExpression().length;
+  setSelectionOffsets(end, end);
 }
 
 // Decimal arithmetic backed by BigInt; division is rounded to 15 decimal places.
@@ -112,7 +150,7 @@ function tokenize(source) {
   return tokens;
 }
 function calculate(source) {
-  const tokens = tokenize(source);
+  const tokens = tokenize(normalizeExpression(source));
   let position = 0;
   function primary() {
     const token = tokens[position];
@@ -160,7 +198,7 @@ function calculate(source) {
 }
 
 function displayResult() {
-  const source = exprEl.value.trim();
+  const source = getExpression().trim();
   if (!source) {
     resultEl.textContent = '0';
     lastResult = null;
@@ -178,12 +216,12 @@ function displayResult() {
 }
 
 function insert(text) {
-  const start = exprEl.selectionStart ?? exprEl.value.length;
-  const end = exprEl.selectionEnd ?? start;
+  const current = getExpression();
+  const { start, end } = getSelectionOffsets();
   pushUndo();
-  exprEl.value = exprEl.value.slice(0, start) + text + exprEl.value.slice(end);
+  setExpression(current.slice(0, start) + text + current.slice(end));
   const cursor = start + text.length;
-  try { exprEl.setSelectionRange(cursor, cursor); } catch (_) {}
+  setSelectionOffsets(cursor, cursor);
   displayResult();
 }
 
@@ -199,32 +237,32 @@ async function press(key) {
     return;
   }
   if (key === 'C') {
-    if (exprEl.value) pushUndo();
-    exprEl.value = '';
+    if (getExpression()) pushUndo();
+    setExpression('');
     moveCursorToEnd();
     displayResult();
     showMessage('');
     return;
   }
   if (key === '⌫') {
-    let start = exprEl.selectionStart ?? exprEl.value.length;
-    let end = exprEl.selectionEnd ?? start;
+    const current = getExpression();
+    let { start, end } = getSelectionOffsets();
     if (start === end && start > 0) start--;
     if (start !== end) {
       pushUndo();
-      exprEl.value = exprEl.value.slice(0, start) + exprEl.value.slice(end);
-      try { exprEl.setSelectionRange(start, start); } catch (_) {}
+      setExpression(current.slice(0, start) + current.slice(end));
+      setSelectionOffsets(start, start);
       displayResult();
     }
     return;
   }
   if (key === '=') {
     if (lastResult === null) { displayResult(); return; }
-    const original = exprEl.value;
+    const original = getExpression();
     const result = lastResult;
     if (!save(original, result)) return;
     pushUndo();
-    exprEl.value = result;
+    setExpression(result);
     moveCursorToEnd();
     displayResult();
     showMessage('履歴に保存しました');
@@ -300,7 +338,7 @@ function renderHistory() {
 
     const edit = makeButton('式を編集', () => {
       pushUndo();
-      exprEl.value = item.expression;
+      setExpression(item.expression);
       moveCursorToEnd();
       displayResult();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -350,6 +388,73 @@ function load() {
 }
 
 $('#undoBtn').addEventListener('click', undo);
+$('#cursorLeft').addEventListener('click', () => {
+  const { start, end } = getSelectionOffsets();
+  const position = start === end ? Math.max(0, start - 1) : start;
+  setSelectionOffsets(position, position);
+});
+$('#cursorRight').addEventListener('click', () => {
+  const { start, end } = getSelectionOffsets();
+  const position = start === end ? Math.min(getExpression().length, end + 1) : end;
+  setSelectionOffsets(position, position);
+});
+function selectNumberAt(position) {
+  const value = getExpression();
+  const isNumberChar = c => /[0-9０-９.．]/.test(c || '');
+  let point = Math.max(0, Math.min(position, value.length));
+  if (!isNumberChar(value[point]) && point > 0 && isNumberChar(value[point - 1])) point--;
+  if (!isNumberChar(value[point])) return false;
+  let start = point, end = point + 1;
+  while (start > 0 && isNumberChar(value[start - 1])) start--;
+  while (end < value.length && isNumberChar(value[end])) end++;
+  setSelectionOffsets(start, end);
+  return true;
+}
+$('#selectNumber').addEventListener('click', () => {
+  const { start, end } = getSelectionOffsets();
+  if (!selectNumberAt(start)) showMessage('数字の上にカーソルを置いてください');
+  else showMessage('数字を選択しました');
+});
+exprEl.addEventListener('dblclick', event => {
+  let position = getSelectionOffsets().start;
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    if (range && exprEl.contains(range.startContainer)) {
+      const before = range.cloneRange();
+      before.selectNodeContents(exprEl);
+      before.setEnd(range.startContainer, range.startOffset);
+      position = before.toString().length;
+    }
+  }
+  if (selectNumberAt(position)) event.preventDefault();
+});
+let previousTap = null;
+exprEl.addEventListener('touchend', event => {
+  const touch = event.changedTouches && event.changedTouches[0];
+  if (!touch) return;
+  const now = Date.now();
+  if (previousTap && now - previousTap.time < 360 &&
+      Math.hypot(touch.clientX - previousTap.x, touch.clientY - previousTap.y) < 28) {
+    let position = getSelectionOffsets().start;
+    if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+      if (range && exprEl.contains(range.startContainer)) {
+        const before = range.cloneRange();
+        before.selectNodeContents(exprEl);
+        before.setEnd(range.startContainer, range.startOffset);
+        position = before.toString().length;
+      }
+    }
+    if (selectNumberAt(position)) event.preventDefault();
+    previousTap = null;
+  } else {
+    previousTap = { time: now, x: touch.clientX, y: touch.clientY };
+  }
+}, { passive: false });
+// Keep the editor selectable, but route all text changes through the calculator keypad.
+exprEl.addEventListener('beforeinput', event => event.preventDefault());
+exprEl.addEventListener('keydown', event => event.preventDefault());
+exprEl.addEventListener('paste', event => event.preventDefault());
 $('#keypad').addEventListener('click', event => {
   const button = event.target.closest('button[data-key]');
   if (button) press(button.dataset.key);
@@ -383,10 +488,5 @@ $('#exportBtn').addEventListener('click', () => {
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
   showMessage('バックアップを作成しました');
 });
-
-// readonly + inputmode=none prevents the iPhone software keyboard.
-// Keep focus/selection available so the in-app keypad can edit at the cursor.
-exprEl.addEventListener('keydown', event => event.preventDefault());
-exprEl.addEventListener('beforeinput', event => event.preventDefault());
 
 load();
