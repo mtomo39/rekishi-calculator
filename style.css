@@ -26,7 +26,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
 .expression-editor:empty::before { content: attr(data-placeholder); color: #aab1bc; }
 .expression-editor:focus { border-color: #2864c5; box-shadow: 0 0 0 2px #2864c51c; }
 .expression-editor::selection, .expression-editor *::selection { background: #a9caff; color: #102b52; }
-.editor-tools { display: grid; grid-template-columns: 42px 42px 42px minmax(64px, 1fr) minmax(64px, 1fr); gap: 6px; margin-top: 8px; }
+.editor-tools { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 .editor-tools button, .history-head-actions button {
   min-height: 44px; border: 0; border-radius: 9px; background: #e4ebf6; color: #24466f;
   font-size: 15px; font-weight: 700; padding: 7px 5px;
@@ -39,7 +39,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
 .keypad button:active { filter: brightness(.94); transform: scale(.98); }
 .keypad .utility { background: #e5e9f0; color: #3f4b5d; font-size: 17px; }
 .keypad .operator { background: #e5edfb; color: #2456a3; }
-.keypad .equals { grid-column: 1 / -1; height: 46px; background: #2864c5; color: #fff; font-size: 22px; }
+.keypad .equals { height: 46px; background: #2864c5; color: #fff; font-size: 22px; }
 .history-section { margin-top: 12px; }
 .section-head { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .section-head h2 { margin: 0; font-size: 15px; }
