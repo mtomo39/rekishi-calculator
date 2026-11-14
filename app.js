@@ -48,14 +48,21 @@ const STORAGE_KEY = 'rekishi-calculator-history-v2';
 let history = [];
 let lastResult = null;
 let undoStack = [];
+let redoStack = [];
+let tapAudioContext = null;
 
 function showMessage(message = '') {
   messageEl.textContent = message;
 }
 
+function pushSnapshot(stack, expression) {
+  stack.push(expression);
+  if (stack.length > 100) stack.shift();
+}
+
 function pushUndo() {
-  undoStack.push(getExpression());
-  if (undoStack.length > 100) undoStack.shift();
+  pushSnapshot(undoStack, getExpression());
+  redoStack = [];
 }
 
 function undo() {
@@ -63,15 +70,61 @@ function undo() {
     showMessage('戻せる操作がありません');
     return;
   }
+  pushSnapshot(redoStack, getExpression());
   setExpression(undoStack.pop());
   moveCursorToEnd();
   displayResult();
   showMessage('元に戻しました');
 }
 
+function redo() {
+  if (!redoStack.length) {
+    showMessage('やり直せる操作がありません');
+    return;
+  }
+  pushSnapshot(undoStack, getExpression());
+  setExpression(redoStack.pop());
+  moveCursorToEnd();
+  displayResult();
+  showMessage('やり直しました');
+}
+
 function moveCursorToEnd() {
   const end = getExpression().length;
   setSelectionOffsets(end, end);
+}
+
+function playTapSound() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  try {
+    if (!tapAudioContext) tapAudioContext = new AudioContext();
+    const context = tapAudioContext;
+    const play = () => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = context.currentTime;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1100, now);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.04);
+    };
+
+    if (context.state === 'suspended') {
+      context.resume().then(play).catch(error => {
+        console.warn('タップ音を再生できませんでした', error);
+      });
+    } else {
+      play();
+    }
+  } catch (error) {
+    console.warn('タップ音を再生できませんでした', error);
+  }
 }
 
 // Decimal arithmetic backed by BigInt; division is rounded to 15 decimal places.
@@ -388,6 +441,7 @@ function load() {
 }
 
 $('#undoBtn').addEventListener('click', undo);
+$('#redoBtn').addEventListener('click', redo);
 $('#pasteBtn').addEventListener('click', () => press('貼付'));
 $('#cursorLeft').addEventListener('click', () => {
   const { start, end } = getSelectionOffsets();
@@ -460,6 +514,11 @@ $('#keypad').addEventListener('click', event => {
   const button = event.target.closest('button[data-key]');
   if (button) press(button.dataset.key);
 });
+document.addEventListener('click', event => {
+  const target = event.target;
+  const button = target && typeof target.closest === 'function' && target.closest('button');
+  if (button) playTapSound();
+}, true);
 $('#clearHistory').addEventListener('click', () => {
   if (!history.length) return;
   if (confirm('計算履歴をすべて削除しますか？')) {
