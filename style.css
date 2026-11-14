@@ -31,6 +31,11 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
   min-height: 44px; border: 0; border-radius: 9px; background: #e4ebf6; color: #24466f;
   font-size: 15px; font-weight: 700; padding: 7px 5px;
 }
+.editor-tools .icon-button { display: grid; place-items: center; padding: 6px; }
+.editor-icon {
+  display: block; width: 24px; height: 24px; fill: none; stroke: currentColor;
+  stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+}
 .editor-tools button:active, .history-head-actions button:active { filter: brightness(.94); }
 .result { min-height: 48px; padding: 8px 2px 2px; overflow-wrap: anywhere; text-align: right; font-size: 36px; line-height: 1.2; font-weight: 750; }
 .message { min-height: 18px; color: #b45309; font-size: 12px; line-height: 18px; text-align: left; font-weight: 600; }
