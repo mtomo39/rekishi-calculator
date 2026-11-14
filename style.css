@@ -38,7 +38,10 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
   stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
 }
 .editor-tools button:active, .history-head-actions button:active { filter: brightness(.94); }
-.result { min-height: 48px; padding: 8px 2px 2px; overflow-wrap: anywhere; text-align: right; font-size: clamp(40px, 6vh, 48px); line-height: 1.2; font-weight: 750; }
+.result {
+  min-height: 48px; padding: 8px 2px 2px; overflow-x: auto; overflow-y: hidden;
+  white-space: nowrap; text-align: right; font-size: clamp(40px, 6vh, 48px); line-height: 1.2; font-weight: 750;
+}
 .message { min-height: 18px; color: #b45309; font-size: 12px; line-height: 18px; text-align: left; font-weight: 600; }
 .keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-top: 7px; }
 .keypad button { min-width: 0; height: clamp(52px, 8.5vh, 66px); border: 0; border-radius: 10px; background: #f0f2f6; color: #20242b; font-size: 22px; font-weight: 600; }
