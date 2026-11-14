@@ -14,16 +14,12 @@
 </head>
 <body>
 <main class="app">
-  <header class="topbar">
-    <span class="version">Ver. 1.6.5</span>
-  </header>
-
   <section id="calculator" class="calculator" aria-label="電卓">
     <div id="message" class="message" aria-live="polite"></div>
     <div id="expression" class="expression-editor" contenteditable="true"
       inputmode="none" role="textbox" aria-label="計算式" aria-multiline="false"
       spellcheck="false" autocorrect="off" autocomplete="off" data-placeholder="0"></div>
-    <div class="editor-tools" aria-label="カーソルと編集">
+    <div id="editorTools" class="editor-tools" aria-label="計算式の編集">
       <button id="undoBtn" class="icon-button" type="button" aria-label="元に戻す">
         <svg class="editor-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M9 14 5 10l4-4M5 10h8a6 6 0 0 1 0 12h-1" />
@@ -37,9 +33,13 @@
       <button id="cursorLeft" type="button" aria-label="カーソルを左へ">◁</button>
       <button id="cursorRight" type="button" aria-label="カーソルを右へ">▷</button>
       <button id="selectNumber" type="button">選択</button>
-      <button id="pasteBtn" type="button">貼付</button>
     </div>
     <div id="result" class="result" aria-live="polite">0</div>
+    <div class="result-actions" aria-label="履歴と貼り付け">
+      <button id="historyToggle" class="history-toggle" type="button"
+        aria-controls="history" aria-expanded="false">履歴</button>
+      <button id="pasteBtn" type="button">貼付</button>
+    </div>
 
     <div class="keypad" id="keypad">
       <button data-key="C" class="utility">C</button>
@@ -63,10 +63,9 @@
     </div>
   </section>
 
-  <section id="historySection" class="history-section">
+  <section id="historySection" class="history-section" aria-label="計算履歴">
     <div class="section-head">
-      <h2><button id="historyToggle" class="history-toggle" type="button"
-        aria-controls="history" aria-expanded="false">履歴</button></h2>
+      <h2>計算履歴</h2>
       <div id="historyActions" class="history-head-actions" hidden>
         <button id="exportBtn" class="text-button" type="button">履歴を書き出す</button>
         <button id="clearHistory" class="text-button" type="button">全削除</button>
@@ -76,9 +75,11 @@
       <p class="empty">履歴はありません</p>
     </div>
   </section>
+  <footer class="app-footer"><span class="version">Ver. 1.6.6</span></footer>
 </main>
 <script src="app.js"></script>
 <script src="history-navigation.js"></script>
+<script src="layout-controls.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
