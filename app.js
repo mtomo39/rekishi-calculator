@@ -292,7 +292,7 @@ function displayResult() {
     showMessage('');
   } catch (error) {
     lastResult = null;
-    resultEl.textContent = '';
+    // Keep the last valid result visible while the expression is incomplete or invalid.
     showMessage(error.message);
   }
 }
