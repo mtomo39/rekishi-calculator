@@ -15,21 +15,22 @@
 <body>
 <main class="app">
   <header class="topbar">
-    <span class="version">Ver. 1.4.0</span>
+    <span class="version">Ver. 1.5.0</span>
   </header>
 
   <section class="calculator" aria-label="電卓">
+    <div id="message" class="message" aria-live="polite"></div>
     <div id="expression" class="expression-editor" contenteditable="true"
       inputmode="none" role="textbox" aria-label="計算式" aria-multiline="false"
       spellcheck="false" autocorrect="off" autocomplete="off" data-placeholder="0"></div>
     <div class="editor-tools" aria-label="カーソルと編集">
-      <button id="cursorLeft" type="button" aria-label="カーソルを左へ">◀</button>
-      <button id="cursorRight" type="button" aria-label="カーソルを右へ">▶</button>
-      <button id="selectNumber" type="button">数字を選択</button>
-      <button id="undoBtn" type="button">元に戻す</button>
+      <button id="undoBtn" type="button" aria-label="元に戻す">↺</button>
+      <button id="cursorLeft" type="button" aria-label="カーソルを左へ">◁</button>
+      <button id="cursorRight" type="button" aria-label="カーソルを右へ">▷</button>
+      <button id="selectNumber" type="button">選択</button>
+      <button id="pasteBtn" type="button">貼付</button>
     </div>
     <div id="result" class="result" aria-live="polite">0</div>
-    <div id="message" class="message" aria-live="polite"></div>
 
     <div class="keypad" id="keypad">
       <button data-key="C" class="utility">C</button>
@@ -46,7 +47,6 @@
       <button data-key="1">1</button><button data-key="2">2</button>
       <button data-key="3">3</button><button data-key="−" class="operator">−</button>
 
-      <button data-key="貼付" class="utility">貼付</button>
       <button data-key="0">0</button><button data-key=".">.</button>
       <button data-key="+" class="operator">+</button>
 

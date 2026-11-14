@@ -388,6 +388,7 @@ function load() {
 }
 
 $('#undoBtn').addEventListener('click', undo);
+$('#pasteBtn').addEventListener('click', () => press('貼付'));
 $('#cursorLeft').addEventListener('click', () => {
   const { start, end } = getSelectionOffsets();
   const position = start === end ? Math.max(0, start - 1) : start;
