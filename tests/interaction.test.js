@@ -100,15 +100,27 @@ function loadApp({ audio = true } = {}) {
   return { context, document, elements, audioStats };
 }
 
-test('editor controls use six equal-width buttons and paired undo/redo icons', () => {
+test('editor controls use six equal-width buttons and consistent SVG undo/redo icons', () => {
   const controls = html.match(/<div class="editor-tools"[^>]*>([\s\S]*?)<\/div>/);
   assert.ok(controls, 'editor controls should exist');
-  assert.match(controls[1], /id="undoBtn"[^>]*>↶<\/button>/);
-  assert.match(controls[1], /id="redoBtn"[^>]*aria-label="やり直す"[^>]*>↷<\/button>/);
+  for (const id of ['undoBtn', 'redoBtn']) {
+    const button = controls[1].match(new RegExp(`<button id="${id}"[^>]*>([\\s\\S]*?)<\\/button>`));
+    assert.ok(button, `${id} button should exist`);
+    assert.match(button[1], /<svg class="editor-icon"[^>]*aria-hidden="true"/);
+    assert.match(button[1], /<path d="[^"]+"/);
+  }
+  assert.match(controls[1], /id="undoBtn"[^>]*aria-label="元に戻す"/);
+  assert.match(controls[1], /id="redoBtn"[^>]*aria-label="やり直す"/);
+  assert.doesNotMatch(controls[1], /[⟲⟳↶↷]/);
 
   const gridRule = css.match(/\.editor-tools\s*\{([^}]+)\}/);
   assert.ok(gridRule, 'editor controls grid rule should exist');
   assert.match(gridRule[1], /grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/);
+
+  const iconRule = css.match(/\.editor-icon\s*\{([^}]+)\}/);
+  assert.ok(iconRule, 'undo/redo SVG icons should share a style');
+  assert.match(iconRule[1], /stroke-width:\s*2\.5/);
+  assert.match(iconRule[1], /stroke-linecap:\s*round/);
 });
 
 test('equals occupies the open lower-right keypad cell and retains emphasis', () => {
@@ -154,10 +166,10 @@ test('button actions remain usable when Web Audio is unavailable', () => {
   assert.equal(elements.get('#expression').textContent, '7');
 });
 
-test('release version, service worker cache, and README use version 1.6.0', () => {
-  assert.match(html, /Ver\. 1\.6\.0/);
-  assert.match(serviceWorker, /rekishi-calculator-v1\.6\.0/);
-  assert.match(readme, /### Version 1\.6\.0/);
+test('release version, service worker cache, and README use version 1.6.1', () => {
+  assert.match(html, /Ver\. 1\.6\.1/);
+  assert.match(serviceWorker, /rekishi-calculator-v1\.6\.1/);
+  assert.match(readme, /### Version 1\.6\.1/);
   assert.match(readme, /(?:タップ音|クリック音)/);
   assert.match(readme, /REDO/);
 });
