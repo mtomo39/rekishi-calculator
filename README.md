@@ -25,3 +25,12 @@ Safariで公開URLを開き、共有 → ホーム画面に追加。
 ## Version 1.2.0
 - Added a history action to copy the calculation result.
 - Added an undo button to revert the latest expression edit (up to 100 steps).
+
+## Version 1.3.0
+- iPhone SE向けに画面レイアウトを簡素化し、不要な表示や余白を削減。
+- アプリ名や説明文を削除し、バージョン番号のみ表示。
+- 「元に戻す」と「バックアップ」を横並びに配置。
+- 履歴の「結果を使う」機能を削除。
+- 履歴から復元した式を、iOS標準キーボードを表示せず、アプリ内テンキーで編集できるように修正。
+- 式表示欄を操作した際に表示される不要な警告メッセージを解消。
+- 式のコピー、計算結果のコピー、バックアップ機能を改善。
