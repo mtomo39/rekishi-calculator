@@ -1,4 +1,4 @@
-const CACHE = 'rekishi-calculator-v1.6.8';
+const CACHE = 'rekishi-calculator-v1.7.0';
 const FILES = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const FILES = [
   './app.js',
   './history-navigation.js',
   './layout-controls.js',
+  './calculator-enhancements.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

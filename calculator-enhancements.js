@@ -1,0 +1,199 @@
+'use strict';
+
+// Keep an unfinished expression across reloads on this device.
+const DRAFT_KEY = 'rekishi-calculator-draft-v1';
+const originalSetExpression = window.setExpression;
+window.setExpression = function (value) {
+  originalSetExpression(value);
+  try { localStorage.setItem(DRAFT_KEY, document.querySelector('#expression').textContent || ''); }
+  catch (_) { /* Draft persistence is best-effort. */ }
+};
+
+try {
+  const draft = localStorage.getItem(DRAFT_KEY);
+  if (draft !== null && draft !== '') {
+    window.setExpression(draft);
+    window.moveCursorToEnd();
+    window.displayResult();
+  }
+} catch (_) { /* Continue with an empty expression if storage is unavailable. */ }
+
+const keypad = document.querySelector('#keypad');
+const expressionEditor = document.querySelector('#expression');
+const repeatState = { operator: null, operand: null };
+const originalPress = window.press;
+
+function rawExpression() {
+  return expressionEditor.textContent.replace(/,/g, '');
+}
+
+function lastNumberRange() {
+  const value = rawExpression();
+  const selection = window.getSelection();
+  let cursor = value.length;
+  if (selection && selection.rangeCount) {
+    const range = selection.getRangeAt(0);
+    if (expressionEditor.contains(range.startContainer)) {
+      const before = range.cloneRange();
+      before.selectNodeContents(expressionEditor);
+      before.setEnd(range.startContainer, range.startOffset);
+      cursor = before.toString().replace(/,/g, '').length;
+    }
+  }
+  let start = cursor, end = cursor;
+  while (start > 0 && /[0-9.]/.test(value[start - 1])) start--;
+  while (end < value.length && /[0-9.]/.test(value[end])) end++;
+  if (start === end && cursor < value.length) {
+    while (start > 0 && /[0-9.]/.test(value[start - 1])) start--;
+    while (end < value.length && /[0-9.]/.test(value[end])) end++;
+  }
+  if (start === end) return null;
+  return { value, start, end, number: value.slice(start, end) };
+}
+
+function replaceCurrentNumber(replacement) {
+  const range = lastNumberRange();
+  if (!range) {
+    window.showMessage('数字を入力してから押してください');
+    return false;
+  }
+  window.pushUndo();
+  const next = range.value.slice(0, range.start) + replacement + range.value.slice(range.end);
+  window.setExpression(next);
+  const cursor = window.formatExpression(next.slice(0, range.start + replacement.length)).length;
+  window.setSelectionOffsets(cursor, cursor);
+  window.displayResult();
+  return true;
+}
+
+function percentValue(number) {
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(number);
+  if (!match) return null;
+  const sign = match[1];
+  let digits = (match[2] || '0') + (match[3] || '');
+  let scale = (match[3] || '').length + 2;
+  while (scale > 0 && digits.length > 1 && digits[0] === '0') digits = digits.slice(1);
+  digits = digits.padStart(scale + 1, '0');
+  const point = digits.length - scale;
+  const integer = point > 0 ? digits.slice(0, point) : '0';
+  const fraction = point > 0 ? digits.slice(point) : '0'.repeat(-point) + digits;
+  const trimmedFraction = fraction.replace(/0+$/, '');
+  return sign + integer + (trimmedFraction ? '.' + trimmedFraction : '');
+}
+
+function toggleSign() {
+  const range = lastNumberRange();
+  if (!range) {
+    window.showMessage('数字を入力してから押してください');
+    return;
+  }
+  let replacement = range.number;
+  const before = range.value.slice(0, range.start);
+  const unaryMinus = before.endsWith('-') &&
+    (before.length === 1 || /[+−*/×÷(]/.test(before[before.length - 2]));
+  if (unaryMinus) {
+    window.pushUndo();
+    const next = before.slice(0, -1) + range.value.slice(range.start);
+    window.setExpression(next);
+    window.setSelectionOffsets(Math.max(0, range.start - 1), Math.max(0, range.start - 1));
+  } else {
+    replacement = '-' + replacement;
+    replaceCurrentNumber(replacement);
+  }
+  window.displayResult();
+}
+
+function lastBinaryOperation(source) {
+  const expression = source.replace(/,/g, '');
+  let depth = 0, candidate = null;
+  for (let i = 0; i < expression.length; i++) {
+    const c = expression[i];
+    if (c === '(') { depth++; continue; }
+    if (c === ')') { depth--; continue; }
+    if (depth !== 0 || !'+-−*/×÷'.includes(c)) continue;
+    if ('+-−'.includes(c) && (i === 0 || '+-−*/×÷('.includes(expression[i - 1]))) continue;
+    candidate = { operator: c, operand: expression.slice(i + 1) };
+  }
+  if (!candidate || !candidate.operand) return null;
+  try {
+    window.calculate(candidate.operand);
+    return candidate;
+  } catch (_) {
+    return null;
+  }
+}
+
+function insertExtraKeys() {
+  const row = document.createElement('div');
+  row.className = 'keypad-extra-row';
+  for (const [label, key] of [['±', '±'], ['%','%']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.key = key;
+    button.className = 'utility';
+    button.textContent = label;
+    row.append(button);
+  }
+  keypad.insertBefore(row, keypad.querySelector('[data-key="7"]'));
+}
+
+insertExtraKeys();
+
+// Handle new keys before the calculator's delegated keypad click listener.
+keypad.addEventListener('click', event => {
+  const button = event.target.closest('button[data-key]');
+  if (!button) return;
+  const key = button.dataset.key;
+  if (key === '±' || key === '%') {
+    event.stopImmediatePropagation();
+    if (key === '±') toggleSign();
+    else {
+      const range = lastNumberRange();
+      if (range) replaceCurrentNumber(percentValue(range.number));
+      else window.showMessage('数字を入力してから押してください');
+    }
+    return;
+  }
+  if (key !== '=') repeatState.operator = repeatState.operand = null;
+}, true);
+
+window.press = async function (key) {
+  if (key !== '=') {
+    repeatState.operator = repeatState.operand = null;
+    return originalPress(key);
+  }
+
+  const source = rawExpression();
+  if (repeatState.operator && source === String(window.lastResult)) {
+    window.setExpression(source + repeatState.operator + repeatState.operand);
+    window.moveCursorToEnd();
+    window.displayResult();
+  } else {
+    const operation = lastBinaryOperation(source);
+    if (operation) {
+      repeatState.operator = operation.operator;
+      repeatState.operand = operation.operand;
+    } else {
+      repeatState.operator = repeatState.operand = null;
+    }
+  }
+  return originalPress(key);
+};
+
+// Add an insert-result action separate from the existing copy-result action.
+const originalRenderHistory = window.renderHistory;
+window.renderHistory = function () {
+  originalRenderHistory();
+  const cards = document.querySelectorAll('#history .history-item');
+  cards.forEach((card, index) => {
+    const item = window.history[index];
+    if (!item) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = '結果を使う';
+    button.addEventListener('click', () => window.insert(item.result));
+    card.querySelector('.history-actions').append(button);
+  });
+};
+// app.js calls renderHistory during initial load before this extension is installed.
+window.renderHistory();
