@@ -1,34 +1,392 @@
 'use strict';
-const $=s=>document.querySelector(s);const exprEl=$('#expression'),resultEl=$('#result'),messageEl=$('#message'),historyEl=$('#history');
-const STORAGE_KEY='rekishi-calculator-history-v2';let history=[];let lastResult=null;let undoStack=[];
-function pushUndo(){undoStack.push(exprEl.value);if(undoStack.length>100)undoStack.shift();}
-function undo(){if(!undoStack.length){showMessage('戻せる操作がありません');return}exprEl.value=undoStack.pop();exprEl.setSelectionRange(exprEl.value.length,exprEl.value.length);displayResult();showMessage('ひとつ前の操作に戻しました');}
-function showMessage(s=''){messageEl.textContent=s;}
+
+const $ = (selector) => document.querySelector(selector);
+const exprEl = $('#expression');
+const resultEl = $('#result');
+const messageEl = $('#message');
+const historyEl = $('#history');
+const STORAGE_KEY = 'rekishi-calculator-history-v2';
+
+let history = [];
+let lastResult = null;
+let undoStack = [];
+
+function showMessage(message = '') {
+  messageEl.textContent = message;
+}
+
+function pushUndo() {
+  undoStack.push(exprEl.value);
+  if (undoStack.length > 100) undoStack.shift();
+}
+
+function undo() {
+  if (!undoStack.length) {
+    showMessage('戻せる操作がありません');
+    return;
+  }
+  exprEl.value = undoStack.pop();
+  moveCursorToEnd();
+  displayResult();
+  showMessage('元に戻しました');
+}
+
+function moveCursorToEnd() {
+  const end = exprEl.value.length;
+  try { exprEl.setSelectionRange(end, end); } catch (_) {}
+}
+
 // Decimal arithmetic backed by BigInt; division is rounded to 15 decimal places.
-function dec(s){s=String(s);let sign=1n;if(s[0]==='-'){sign=-1n;s=s.slice(1)}let [a,b='']=s.split('.');b=b.replace(/0+$/,'');return norm({n:sign*BigInt((a||'0')+b),scale:b.length});}
-function norm(x){while(x.scale>0&&x.n%10n===0n){x.n/=10n;x.scale--}return x;}
-function align(a,b){let scale=Math.max(a.scale,b.scale);return [{n:a.n*10n**BigInt(scale-a.scale),scale},{n:b.n*10n**BigInt(scale-b.scale),scale},scale]}
-function add(a,b){let [x,y,s]=align(a,b);return norm({n:x.n+y.n,scale:s})}function sub(a,b){let [x,y,s]=align(a,b);return norm({n:x.n-y.n,scale:s})}function mul(a,b){return norm({n:a.n*b.n,scale:a.scale+b.scale})}
-function div(a,b){if(b.n===0n)throw Error('0では割れません');const p=15n+BigInt(b.scale)-BigInt(a.scale);let num=a.n,den=b.n;if(p>=0)num*=10n**p;else den*=10n**(-p);let q=num/den,r=num%den;if((r<0n?-r:r)*2n>=(den<0n?-den:den))q+=((num<0n)!==(den<0n))?-1n:1n;return norm({n:q,scale:15});}
-function fmt(x){x=norm(x);let neg=x.n<0n;let raw=(neg?-x.n:x.n).toString();if(x.scale){raw=raw.padStart(x.scale+1,'0');raw=raw.slice(0,-x.scale)+'.'+raw.slice(-x.scale)}return (neg?'-':'')+raw;}
-function tokenize(s){if(s.length>300)throw Error('式が長すぎます');let out=[],i=0;while(i<s.length){let c=s[i];if(/\s/.test(c)){i++;continue}if(/[0-9.]/.test(c)){let start=i,dots=0;while(i<s.length&&/[0-9.]/.test(s[i])){if(s[i]==='.')dots++;i++}let t=s.slice(start,i);if(dots>1||t==='.')throw Error('数字の形式を確認してください');out.push({t:'num',v:t});continue}if('+-−*/×÷()'.includes(c)){out.push({t:'op',v:c});i++;continue}throw Error('使えない文字があります')}return out;}
-function calculate(source){let ts=tokenize(source),p=0;function primary(){let x=ts[p];if(!x)throw Error('式が途中です');if(x.t==='op'&&(x.v==='+'||x.v==='-'||x.v==='−')){p++;let v=primary();return x.v==='+'?v:{n:-v.n,scale:v.scale}}if(x.v==='('){p++;let v=expression();if(!ts[p]||ts[p].v!==')')throw Error('括弧が閉じていません');p++;return v}if(x.t==='num'){p++;return dec(x.v)}throw Error('数字を入力してください')}
-function term(){let v=primary();while(ts[p]&&['*','×','/','÷'].includes(ts[p].v)){let op=ts[p++].v,r=primary();v=(op==='*'||op==='×')?mul(v,r):div(v,r)}return v}
-function expression(){let v=term();while(ts[p]&&['+','-','−'].includes(ts[p].v)){let op=ts[p++].v,r=term();v=op==='+'?add(v,r):sub(v,r)}return v}
-if(!ts.length)throw Error('式を入力してください');let v=expression();if(p!==ts.length)throw Error('式を確認してください');return v;}
-function displayResult(){let s=exprEl.value.trim();if(!s){resultEl.textContent='0';lastResult=null;return}try{let v=calculate(s);lastResult=fmt(v);resultEl.textContent=lastResult;showMessage('')}catch(e){lastResult=null;resultEl.textContent='';showMessage(e.message)}}
-function insert(text){const el=exprEl;pushUndo();let a=el.selectionStart??el.value.length,b=el.selectionEnd??a;let val=el.value;el.value=val.slice(0,a)+text+val.slice(b);let pos=a+text.length;el.setSelectionRange(pos,pos);displayResult();}
-async function press(k){if(k==='貼付'){try{const text=await navigator.clipboard.readText();if(text)insert(text);else showMessage('クリップボードは空です')}catch{showMessage('貼り付けを許可できませんでした')}return}if(k==='UNDO'){undo();return}if(k==='C'){if(exprEl.value)pushUndo();exprEl.value='';displayResult();showMessage();return}if(k==='⌫'){let a=exprEl.selectionStart??exprEl.value.length,b=exprEl.selectionEnd??a;if(a===b&&a>0)a--;if(a!==b||a>0){pushUndo();exprEl.value=exprEl.value.slice(0,a)+exprEl.value.slice(b);exprEl.setSelectionRange(a,a);displayResult()}return}if(k==='='){if(lastResult===null){displayResult();return}let original=exprEl.value;save(original,lastResult);pushUndo();exprEl.value=lastResult;exprEl.setSelectionRange(exprEl.value.length,exprEl.value.length);displayResult();showMessage('履歴に保存しました');return}insert(k);}
-function save(expression,result){let item={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),expression,result,createdAt:new Date().toISOString()};history.unshift(item);history=history.slice(0,250);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(history));renderHistory()}catch(e){history.shift();showMessage('保存できませんでした。端末の空き容量を確認してください');}}
-function renderHistory(){historyEl.replaceChildren();if(!history.length){let p=document.createElement('p');p.className='empty';p.textContent='まだ履歴はありません';historyEl.append(p);return}for(const item of history){let card=document.createElement('article');card.className='history-item';let ex=document.createElement('div');ex.className='history-expression';ex.textContent=item.expression;ex.title='長押しして式の一部を選択できます';let res=document.createElement('div');res.className='history-result';res.textContent='= '+item.result;let actions=document.createElement('div');actions.className='history-actions';let reuse=btn('式を編集',()=>{pushUndo();exprEl.value=item.expression;exprEl.setSelectionRange(exprEl.value.length,exprEl.value.length);displayResult();window.scrollTo({top:0,behavior:'smooth'})});let copy=btn('式をコピー',()=>copyText(item.expression));let copyResult=btn('結果をコピー',()=>copyText(item.result));let paste=btn('結果を使う',()=>{pushUndo();exprEl.value=item.result;exprEl.setSelectionRange(exprEl.value.length,exprEl.value.length);displayResult();window.scrollTo({top:0,behavior:'smooth'})});let del=btn('削除',()=>{history=history.filter(x=>x.id!==item.id);persist();renderHistory()});del.classList.add('delete');actions.append(reuse,copy,copyResult,paste,del);card.append(ex,res,actions);historyEl.append(card)}}
-function btn(label,fn){let b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);return b}
-async function copyText(s){try{await navigator.clipboard.writeText(s);showMessage('コピーしました')}catch{showMessage('コピーできませんでした。Safariの共有メニュー等を利用してください')}}
-function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(history));return true}catch{return false}}
-function load(){try{let v=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');history=Array.isArray(v)?v.filter(x=>x&&typeof x.expression==='string'&&typeof x.result==='string'&&typeof x.id==='string').slice(0,250):[]}catch{history=[]}renderHistory()}
-$('#undoBtn').addEventListener('click',undo);
-$('#keypad').addEventListener('click',e=>{let b=e.target.closest('button[data-key]');if(b)press(b.dataset.key)});
-$('#clearHistory').addEventListener('click',()=>{if(!history.length)return;if(confirm('計算履歴をすべて削除しますか？')){history=[];persist();renderHistory()}});
-$('#exportBtn').addEventListener('click',()=>{let blob=new Blob([JSON.stringify({version:1,history},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download='rekishi-calculator-backup.json';a.click();URL.revokeObjectURL(url)});
-// Prevent iOS from opening its software keyboard even if the display field is tapped.
-exprEl.addEventListener('focus',()=>{exprEl.blur();showMessage('入力は下のテンキーを使ってください')});exprEl.addEventListener('keydown',e=>e.preventDefault());exprEl.addEventListener('beforeinput',e=>e.preventDefault());exprEl.addEventListener('click',()=>{showMessage('入力は下のテンキーを使ってください')});
+function dec(s) {
+  s = String(s);
+  let sign = 1n;
+  if (s[0] === '-') { sign = -1n; s = s.slice(1); }
+  let [a, b = ''] = s.split('.');
+  b = b.replace(/0+$/, '');
+  return norm({ n: sign * BigInt((a || '0') + b), scale: b.length });
+}
+function norm(x) {
+  while (x.scale > 0 && x.n % 10n === 0n) { x.n /= 10n; x.scale--; }
+  return x;
+}
+function align(a, b) {
+  const scale = Math.max(a.scale, b.scale);
+  return [
+    { n: a.n * 10n ** BigInt(scale - a.scale), scale },
+    { n: b.n * 10n ** BigInt(scale - b.scale), scale },
+    scale
+  ];
+}
+function add(a, b) { const [x, y, scale] = align(a, b); return norm({ n: x.n + y.n, scale }); }
+function sub(a, b) { const [x, y, scale] = align(a, b); return norm({ n: x.n - y.n, scale }); }
+function mul(a, b) { return norm({ n: a.n * b.n, scale: a.scale + b.scale }); }
+function div(a, b) {
+  if (b.n === 0n) throw Error('0では割れません');
+  const power = 15n + BigInt(b.scale) - BigInt(a.scale);
+  let numerator = a.n, denominator = b.n;
+  if (power >= 0n) numerator *= 10n ** power;
+  else denominator *= 10n ** (-power);
+  let quotient = numerator / denominator;
+  const remainder = numerator % denominator;
+  if ((remainder < 0n ? -remainder : remainder) * 2n >= (denominator < 0n ? -denominator : denominator)) {
+    quotient += ((numerator < 0n) !== (denominator < 0n)) ? -1n : 1n;
+  }
+  return norm({ n: quotient, scale: 15 });
+}
+function fmt(x) {
+  x = norm(x);
+  const negative = x.n < 0n;
+  let raw = (negative ? -x.n : x.n).toString();
+  if (x.scale) {
+    raw = raw.padStart(x.scale + 1, '0');
+    raw = raw.slice(0, -x.scale) + '.' + raw.slice(-x.scale);
+  }
+  return (negative ? '-' : '') + raw;
+}
+function tokenize(source) {
+  if (source.length > 300) throw Error('式が長すぎます');
+  const tokens = [];
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (/[0-9.]/.test(c)) {
+      const start = i;
+      let dots = 0;
+      while (i < source.length && /[0-9.]/.test(source[i])) {
+        if (source[i] === '.') dots++;
+        i++;
+      }
+      const value = source.slice(start, i);
+      if (dots > 1 || value === '.') throw Error('数字の形式を確認してください');
+      tokens.push({ type: 'num', value });
+      continue;
+    }
+    if ('+-−*/×÷()'.includes(c)) {
+      tokens.push({ type: 'op', value: c });
+      i++;
+      continue;
+    }
+    throw Error('使えない文字があります');
+  }
+  return tokens;
+}
+function calculate(source) {
+  const tokens = tokenize(source);
+  let position = 0;
+  function primary() {
+    const token = tokens[position];
+    if (!token) throw Error('式が途中です');
+    if (token.type === 'op' && ['+', '-', '−'].includes(token.value)) {
+      position++;
+      const value = primary();
+      return token.value === '+' ? value : { n: -value.n, scale: value.scale };
+    }
+    if (token.value === '(') {
+      position++;
+      const value = expression();
+      if (!tokens[position] || tokens[position].value !== ')') throw Error('括弧が閉じていません');
+      position++;
+      return value;
+    }
+    if (token.type === 'num') {
+      position++;
+      return dec(token.value);
+    }
+    throw Error('数字を入力してください');
+  }
+  function term() {
+    let value = primary();
+    while (tokens[position] && ['*', '×', '/', '÷'].includes(tokens[position].value)) {
+      const operator = tokens[position++].value;
+      const right = primary();
+      value = (operator === '*' || operator === '×') ? mul(value, right) : div(value, right);
+    }
+    return value;
+  }
+  function expression() {
+    let value = term();
+    while (tokens[position] && ['+', '-', '−'].includes(tokens[position].value)) {
+      const operator = tokens[position++].value;
+      const right = term();
+      value = operator === '+' ? add(value, right) : sub(value, right);
+    }
+    return value;
+  }
+  if (!tokens.length) throw Error('式を入力してください');
+  const value = expression();
+  if (position !== tokens.length) throw Error('式を確認してください');
+  return value;
+}
+
+function displayResult() {
+  const source = exprEl.value.trim();
+  if (!source) {
+    resultEl.textContent = '0';
+    lastResult = null;
+    return;
+  }
+  try {
+    lastResult = fmt(calculate(source));
+    resultEl.textContent = lastResult;
+    showMessage('');
+  } catch (error) {
+    lastResult = null;
+    resultEl.textContent = '';
+    showMessage(error.message);
+  }
+}
+
+function insert(text) {
+  const start = exprEl.selectionStart ?? exprEl.value.length;
+  const end = exprEl.selectionEnd ?? start;
+  pushUndo();
+  exprEl.value = exprEl.value.slice(0, start) + text + exprEl.value.slice(end);
+  const cursor = start + text.length;
+  try { exprEl.setSelectionRange(cursor, cursor); } catch (_) {}
+  displayResult();
+}
+
+async function press(key) {
+  if (key === '貼付') {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) insert(text);
+      else showMessage('クリップボードは空です');
+    } catch (_) {
+      showMessage('貼り付けできません。コピーした式を確認してください');
+    }
+    return;
+  }
+  if (key === 'C') {
+    if (exprEl.value) pushUndo();
+    exprEl.value = '';
+    moveCursorToEnd();
+    displayResult();
+    showMessage('');
+    return;
+  }
+  if (key === '⌫') {
+    let start = exprEl.selectionStart ?? exprEl.value.length;
+    let end = exprEl.selectionEnd ?? start;
+    if (start === end && start > 0) start--;
+    if (start !== end) {
+      pushUndo();
+      exprEl.value = exprEl.value.slice(0, start) + exprEl.value.slice(end);
+      try { exprEl.setSelectionRange(start, start); } catch (_) {}
+      displayResult();
+    }
+    return;
+  }
+  if (key === '=') {
+    if (lastResult === null) { displayResult(); return; }
+    const original = exprEl.value;
+    const result = lastResult;
+    if (!save(original, result)) return;
+    pushUndo();
+    exprEl.value = result;
+    moveCursorToEnd();
+    displayResult();
+    showMessage('履歴に保存しました');
+    return;
+  }
+  insert(key);
+}
+
+function save(expression, result) {
+  const item = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    expression,
+    result,
+    createdAt: new Date().toISOString()
+  };
+  history.unshift(item);
+  history = history.slice(0, 250);
+  if (!persist()) {
+    history.shift();
+    showMessage('保存できませんでした。端末の空き容量を確認してください');
+    return false;
+  }
+  renderHistory();
+  return true;
+}
+
+function makeButton(label, callback, className = '') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  if (className) button.className = className;
+  button.addEventListener('click', callback);
+  return button;
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(String(text));
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+    showMessage('コピーしました');
+  } catch (_) {
+    showMessage('コピーできませんでした。Safariの共有メニュー等を利用してください');
+  }
+}
+
+function renderHistory() {
+  historyEl.replaceChildren();
+  if (!history.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = '履歴はありません';
+    historyEl.append(empty);
+    return;
+  }
+
+  for (const item of history) {
+    const card = document.createElement('article');
+    card.className = 'history-item';
+
+    const expression = document.createElement('div');
+    expression.className = 'history-expression';
+    expression.textContent = item.expression;
+
+    const result = document.createElement('div');
+    result.className = 'history-result';
+    result.textContent = '= ' + item.result;
+
+    const actions = document.createElement('div');
+    actions.className = 'history-actions';
+
+    const edit = makeButton('式を編集', () => {
+      pushUndo();
+      exprEl.value = item.expression;
+      moveCursorToEnd();
+      displayResult();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    const copyExpression = makeButton('式をコピー', () => copyText(item.expression));
+    const copyResult = makeButton('結果をコピー', () => copyText(item.result));
+    const remove = makeButton('削除', () => {
+      const previous = history;
+      history = history.filter(entry => entry.id !== item.id);
+      if (!persist()) {
+        history = previous;
+        showMessage('削除を保存できませんでした');
+      }
+      renderHistory();
+    }, 'delete');
+
+    actions.append(edit, copyExpression, copyResult, remove);
+    card.append(expression, result, actions);
+    historyEl.append(card);
+  }
+}
+
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    history = Array.isArray(saved)
+      ? saved.filter(item =>
+          item &&
+          typeof item.expression === 'string' &&
+          typeof item.result === 'string' &&
+          typeof item.id === 'string'
+        ).slice(0, 250)
+      : [];
+  } catch (_) {
+    history = [];
+  }
+  renderHistory();
+}
+
+$('#undoBtn').addEventListener('click', undo);
+$('#keypad').addEventListener('click', event => {
+  const button = event.target.closest('button[data-key]');
+  if (button) press(button.dataset.key);
+});
+$('#clearHistory').addEventListener('click', () => {
+  if (!history.length) return;
+  if (confirm('計算履歴をすべて削除しますか？')) {
+    const previous = history;
+    history = [];
+    if (!persist()) {
+      history = previous;
+      showMessage('履歴を削除できませんでした');
+    }
+    renderHistory();
+  }
+});
+$('#exportBtn').addEventListener('click', () => {
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    history
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'rekishi-calculator-backup.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  showMessage('バックアップを作成しました');
+});
+
+// readonly + inputmode=none prevents the iPhone software keyboard.
+// Keep focus/selection available so the in-app keypad can edit at the cursor.
+exprEl.addEventListener('keydown', event => event.preventDefault());
+exprEl.addEventListener('beforeinput', event => event.preventDefault());
+
 load();
