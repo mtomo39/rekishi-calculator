@@ -20,8 +20,8 @@ try {
 
 const keypad = document.querySelector('#keypad');
 const expressionEditor = document.querySelector('#expression');
-const repeatState = { operator: null, operand: null };
 const originalPress = window.press;
+let equalsJustPressed = false;
 
 function rawExpression() {
   return expressionEditor.textContent.replace(/,/g, '');
@@ -119,14 +119,13 @@ function lastBinaryOperation(source) {
   }
 }
 
-// % and ± are static keypad buttons. The capture handler prevents the app's
-// delegated keypad handler from treating them as ordinary text input.
 keypad.addEventListener('click', event => {
   const button = event.target.closest('button[data-key]');
   if (!button) return;
   const key = button.dataset.key;
   if (key === '±' || key === '%') {
     event.stopImmediatePropagation();
+    equalsJustPressed = false;
     if (key === '±') toggleSign();
     else {
       const range = lastNumberRange();
@@ -134,29 +133,18 @@ keypad.addEventListener('click', event => {
       else window.showMessage('数字を入力してから押してください');
     }
   } else if (key !== '=') {
-    repeatState.operator = repeatState.operand = null;
+    equalsJustPressed = false;
   }
 }, true);
 
+// Repeated equals is intentionally a no-op; each explicit calculation is saved once.
 window.press = async function (key) {
-  if (key !== '=') {
-    repeatState.operator = repeatState.operand = null;
+  if (key === '=') {
+    if (equalsJustPressed) return;
+    equalsJustPressed = true;
     return originalPress(key);
   }
-  const source = rawExpression();
-  if (repeatState.operator && source === String(window.lastResult)) {
-    window.setExpression(source + repeatState.operator + repeatState.operand);
-    window.moveCursorToEnd();
-    window.displayResult();
-  } else {
-    const operation = lastBinaryOperation(source);
-    if (operation) {
-      repeatState.operator = operation.operator;
-      repeatState.operand = operation.operand;
-    } else {
-      repeatState.operator = repeatState.operand = null;
-    }
-  }
+  equalsJustPressed = false;
   return originalPress(key);
 };
 

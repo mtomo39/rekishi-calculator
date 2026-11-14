@@ -67,15 +67,19 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
 .empty { color: #8992a0; text-align: center; padding: 16px 4px; margin: 0; font-size: 14px; }
 .app-footer { display: flex; justify-content: flex-end; margin-top: 8px; padding: 0 2px; }
 .version { color: #6b7280; font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* Preserve the calculator's vertical layout in history mode so Back stays at the same thumb-friendly height as History. */
 #calculator.history-view #message,
 #calculator.history-view #expression,
 #calculator.history-view #editorTools,
 #calculator.history-view #keypad > :not(.keypad-top-row),
 #calculator.history-view #pasteBtn,
 #calculator.history-view .keypad-top-row button[data-key="%"],
-#calculator.history-view .keypad-top-row button[data-key="±"] { display: none; }
-#calculator.history-view .keypad-top-row { grid-template-columns: minmax(0, 1fr); }
-#calculator.history-view #historyToggle { grid-column: 1; width: 100%; }
+#calculator.history-view .keypad-top-row button[data-key="±"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+#calculator.history-view .keypad-top-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#calculator.history-view #historyToggle { grid-column: 3 / 5; justify-self: end; width: 100%; }
 @media (max-height: 700px) {
   body { padding-top: max(env(safe-area-inset-top), 8px); }
   .app { padding-top: 10px; }
