@@ -15,10 +15,10 @@
 <body>
 <main class="app">
   <header class="topbar">
-    <span class="version">Ver. 1.6.1</span>
+    <span class="version">Ver. 1.6.2</span>
   </header>
 
-  <section class="calculator" aria-label="電卓">
+  <section id="calculator" class="calculator" aria-label="電卓">
     <div id="message" class="message" aria-live="polite"></div>
     <div id="expression" class="expression-editor" contenteditable="true"
       inputmode="none" role="textbox" aria-label="計算式" aria-multiline="false"
@@ -63,15 +63,16 @@
     </div>
   </section>
 
-  <section class="history-section">
+  <section id="historySection" class="history-section">
     <div class="section-head">
-      <h2>履歴</h2>
-      <div class="history-head-actions">
+      <h2><button id="historyToggle" class="history-toggle" type="button"
+        aria-controls="history" aria-expanded="false">履歴</button></h2>
+      <div id="historyActions" class="history-head-actions" hidden>
         <button id="exportBtn" class="text-button" type="button">履歴を書き出す</button>
         <button id="clearHistory" class="text-button" type="button">全削除</button>
       </div>
     </div>
-    <div id="history" class="history">
+    <div id="history" class="history" hidden>
       <p class="empty">履歴はありません</p>
     </div>
   </section>

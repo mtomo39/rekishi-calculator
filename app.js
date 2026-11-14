@@ -5,7 +5,7 @@ const exprEl = $('#expression');
 let rememberedSelection = { start: 0, end: 0 };
 
 function getExpression() { return exprEl.textContent || ''; }
-function setExpression(value) { exprEl.textContent = String(value ?? ''); }
+function setExpression(value) { exprEl.textContent = formatExpression(String(value ?? '')); }
 function getSelectionOffsets() {
   const selection = window.getSelection();
   if (!selection || !selection.rangeCount) return rememberedSelection;
@@ -38,11 +38,31 @@ function normalizeExpression(source) {
   return String(source)
     .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/[＋]/g, '+').replace(/[－−]/g, '-').replace(/[．。]/g, '.')
-    .replace(/[×]/g, '*').replace(/[÷]/g, '/');
+    .replace(/[×]/g, '*').replace(/[÷]/g, '/')
+    .replace(/(^|[^0-9.,])([0-9]{1,3}(?:,[0-9]{3})+)(\.[0-9]*)?(?=$|[^0-9.,])/g,
+      (_, prefix, integer, fraction = '') => prefix + integer.replace(/,/g, '') + fraction);
+}
+function formatNumber(value) {
+  const source = String(value)
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[．]/g, '.');
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(source);
+  if (!match) return source;
+  const integer = match[2].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return match[1] + integer + (match[3] === undefined ? '' : '.' + match[3]);
+}
+function formatExpression(source) {
+  const expression = String(source)
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[．]/g, '.');
+  return expression.replace(/\d+(?:\.\d*)?|\.\d+/g, formatNumber);
 }
 const resultEl = $('#result');
 const messageEl = $('#message');
 const historyEl = $('#history');
+const calculatorEl = $('#calculator');
+const historyActionsEl = $('#historyActions');
+const historyToggle = $('#historyToggle');
 const STORAGE_KEY = 'rekishi-calculator-history-v2';
 
 let history = [];
@@ -50,6 +70,15 @@ let lastResult = null;
 let undoStack = [];
 let redoStack = [];
 let tapAudioContext = null;
+
+function setView(view) {
+  const showingHistory = view === 'history';
+  calculatorEl.hidden = showingHistory;
+  historyEl.hidden = !showingHistory;
+  historyActionsEl.hidden = !showingHistory;
+  historyToggle.textContent = showingHistory ? '電卓に戻る' : '履歴';
+  historyToggle.setAttribute('aria-expanded', String(showingHistory));
+}
 
 function showMessage(message = '') {
   messageEl.textContent = message;
@@ -259,7 +288,7 @@ function displayResult() {
   }
   try {
     lastResult = fmt(calculate(source));
-    resultEl.textContent = lastResult;
+    resultEl.textContent = formatNumber(lastResult);
     showMessage('');
   } catch (error) {
     lastResult = null;
@@ -271,9 +300,13 @@ function displayResult() {
 function insert(text) {
   const current = getExpression();
   const { start, end } = getSelectionOffsets();
+  const expression = current.replace(/,/g, '');
+  const rawStart = current.slice(0, start).replace(/,/g, '').length;
+  const rawEnd = current.slice(0, end).replace(/,/g, '').length;
   pushUndo();
-  setExpression(current.slice(0, start) + text + current.slice(end));
-  const cursor = start + text.length;
+  const next = expression.slice(0, rawStart) + text + expression.slice(rawEnd);
+  setExpression(next);
+  const cursor = formatExpression(next.slice(0, rawStart + text.length)).length;
   setSelectionOffsets(cursor, cursor);
   displayResult();
 }
@@ -301,10 +334,16 @@ async function press(key) {
     const current = getExpression();
     let { start, end } = getSelectionOffsets();
     if (start === end && start > 0) start--;
-    if (start !== end) {
+    let rawStart = current.slice(0, start).replace(/,/g, '').length;
+    const rawEnd = current.slice(0, end).replace(/,/g, '').length;
+    if (start !== end && rawStart === rawEnd && rawStart > 0) rawStart--;
+    if (rawStart !== rawEnd) {
       pushUndo();
-      setExpression(current.slice(0, start) + current.slice(end));
-      setSelectionOffsets(start, start);
+      const expression = current.replace(/,/g, '');
+      const next = expression.slice(0, rawStart) + expression.slice(rawEnd);
+      setExpression(next);
+      const cursor = formatExpression(next.slice(0, rawStart)).length;
+      setSelectionOffsets(cursor, cursor);
       displayResult();
     }
     return;
@@ -327,7 +366,7 @@ async function press(key) {
 function save(expression, result) {
   const item = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    expression,
+    expression: expression.replace(/,/g, ''),
     result,
     createdAt: new Date().toISOString()
   };
@@ -380,11 +419,11 @@ function renderHistory() {
 
     const expression = document.createElement('div');
     expression.className = 'history-expression';
-    expression.textContent = item.expression;
+    expression.textContent = formatExpression(item.expression);
 
     const result = document.createElement('div');
     result.className = 'history-result';
-    result.textContent = '= ' + item.result;
+    result.textContent = '= ' + formatNumber(item.result);
 
     const actions = document.createElement('div');
     actions.className = 'history-actions';
@@ -455,7 +494,7 @@ $('#cursorRight').addEventListener('click', () => {
 });
 function selectNumberAt(position) {
   const value = getExpression();
-  const isNumberChar = c => /[0-9０-９.．]/.test(c || '');
+  const isNumberChar = c => /[0-9０-９.．,]/.test(c || '');
   let point = Math.max(0, Math.min(position, value.length));
   if (!isNumberChar(value[point]) && point > 0 && isNumberChar(value[point - 1])) point--;
   if (!isNumberChar(value[point])) return false;
@@ -469,6 +508,9 @@ $('#selectNumber').addEventListener('click', () => {
   const { start, end } = getSelectionOffsets();
   if (!selectNumberAt(start)) showMessage('数字の上にカーソルを置いてください');
   else showMessage('数字を選択しました');
+});
+historyToggle.addEventListener('click', () => {
+  setView(historyEl.hidden ? 'history' : 'calculator');
 });
 exprEl.addEventListener('dblclick', event => {
   let position = getSelectionOffsets().start;
@@ -549,4 +591,5 @@ $('#exportBtn').addEventListener('click', () => {
   showMessage('バックアップを作成しました');
 });
 
+setView('calculator');
 load();

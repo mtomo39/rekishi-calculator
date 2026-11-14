@@ -5,6 +5,7 @@
   font-synthesis: none;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { min-height: 100%; }
 body {
   margin: 0;
@@ -37,17 +38,19 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
   stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
 }
 .editor-tools button:active, .history-head-actions button:active { filter: brightness(.94); }
-.result { min-height: 48px; padding: 8px 2px 2px; overflow-wrap: anywhere; text-align: right; font-size: 36px; line-height: 1.2; font-weight: 750; }
+.result { min-height: 48px; padding: 8px 2px 2px; overflow-wrap: anywhere; text-align: right; font-size: clamp(40px, 6vh, 48px); line-height: 1.2; font-weight: 750; }
 .message { min-height: 18px; color: #b45309; font-size: 12px; line-height: 18px; text-align: left; font-weight: 600; }
 .keypad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-top: 7px; }
-.keypad button { min-width: 0; height: clamp(46px, 6.5vh, 56px); border: 0; border-radius: 10px; background: #f0f2f6; color: #20242b; font-size: 22px; font-weight: 600; }
+.keypad button { min-width: 0; height: clamp(52px, 8.5vh, 66px); border: 0; border-radius: 10px; background: #f0f2f6; color: #20242b; font-size: 22px; font-weight: 600; }
 .keypad button:active { filter: brightness(.94); transform: scale(.98); }
 .keypad .utility { background: #e5e9f0; color: #3f4b5d; font-size: 17px; }
 .keypad .operator { background: #e5edfb; color: #2456a3; }
-.keypad .equals { height: 46px; background: #2864c5; color: #fff; font-size: 22px; }
+.keypad .equals { height: clamp(52px, 8.5vh, 66px); background: #2864c5; color: #fff; font-size: 22px; }
 .history-section { margin-top: 12px; }
 .section-head { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .section-head h2 { margin: 0; font-size: 15px; }
+.history-toggle { min-height: 44px; border: 0; border-radius: 8px; padding: 8px 10px; background: #e4ebf6; color: #24466f; font-size: 15px; font-weight: 700; }
+.history-toggle:focus-visible { outline: 2px solid #2864c5; outline-offset: 2px; }
 .history-head-actions { display: flex; gap: 6px; }
 .history-head-actions button { min-height: 38px; padding: 6px 10px; font-size: 12px; }
 .history { display: grid; gap: 7px; }
@@ -66,9 +69,7 @@ button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap
   .expression-editor { min-height: 48px; font-size: 23px; padding: 6px 8px; }
   .editor-tools { margin-top: 6px; }
   .editor-tools button { min-height: 42px; }
-  .result { min-height: 43px; font-size: 33px; }
+  .result { min-height: 43px; }
   .keypad { gap: 5px; margin-top: 5px; }
-  .keypad button { height: 43px; }
-  .keypad .equals { height: 40px; }
   .history-section { margin-top: 8px; }
 }
